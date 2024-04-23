@@ -1,7 +1,31 @@
 use std::{env, fs, path::{Path, PathBuf}};
 use rusqlite::{Connection, Result};
 
-pub fn help() {
+pub struct Todo {
+    pub id: i32,
+    pub text: String,
+    pub completed: bool,
+    pub date_created: String,
+}
+
+// Constructor for new instance of Todo
+impl Todo {
+    pub fn new(id: i32, text: String, date_created: String ,completed: bool) -> Self {
+        Todo {
+            id,
+            text,
+            completed,
+            date_created,
+            }
+        }
+    
+    pub fn add(conn: &Connection, text: &str) -> Result<()> {
+            conn.execute("INSERT INTO todo_list (text) VALUES (?)", &[text])?;
+            Ok(())
+        }
+    
+    }
+pub fn help() -> Result<()> {
     let text = r#"Usage
     todo add <text>
     todo list
@@ -9,6 +33,8 @@ pub fn help() {
     todo help
     "#;
     println!("{}", text);
+
+    Ok(())
 }
 
 // find home dir for current user
@@ -58,12 +84,12 @@ pub fn verify_db_path(path: &str) -> Result<()> {
 
 // create table if not exists
 pub fn verify_db(conn: &Connection) -> Result<()> {
-    conn.execute("CREATE TABLE IF NOT EXISTS todo_list {
+    conn.execute("CREATE TABLE IF NOT EXISTS todo_list (
         id  INTEGER NOT NULL,
-        name  TEXT NOT NULL,
+        text  TEXT NOT NULL,
         date_added REAL NOT NULL DEFAULT current_timestamp,
         completed NUMERIC NOT NULL DEFAULT 0,
-        PRIMARY KEY(id AUTOINCREMENT)", [], )?;
+        PRIMARY KEY(id AUTOINCREMENT))", [], )?;
         Ok(())
 }
 
