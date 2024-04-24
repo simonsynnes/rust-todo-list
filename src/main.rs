@@ -1,5 +1,6 @@
 use std::env;
 
+use dialoguer::Confirm;
 use rusqlite::Result;
 use rust_todo_list::{get_connection, help, Todo};
 
@@ -41,6 +42,19 @@ fn main() -> Result<()> {
             } else {
                 help()?;
                 std::process::exit(1);
+            }
+            Ok(())
+        }
+        "reset" => {
+            let confirmation = Confirm::new()
+                .with_prompt("Are you sure you want to reset the list?")
+                .interact()
+                .unwrap();
+
+            if confirmation {
+                Todo::reset(&connection)?;
+            } else {
+                println!("Not deleting");
             }
             Ok(())
         }
