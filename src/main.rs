@@ -35,6 +35,16 @@ fn main() -> Result<()> {
             Todo::print_list(todo_list)?;
             Ok(())
         }
+        "approve" => {
+            if !suffix.as_str().is_empty() {
+                let id = args[2].parse::<i32>().unwrap();
+            Todo::approve_item(&connection, id)?;
+            } else {
+                help()?;
+                std::process::exit(1);
+            }
+            Ok(())
+        }
         "help" | "--help" | "-h" | _ => help(),
     }?;
 
