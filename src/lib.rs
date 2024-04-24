@@ -56,10 +56,28 @@ impl Todo {
                     style("Pending").yellow()
                 };
                 
-                println!("{}, {}",t.text, status);
+                println!("{:>4} | {:<44} {:<8} {}",style(t.id).cyan().bright(), style(truncate_at(&t.text, 12)).bright(), status, style(t.date_created).dim());
             }
             Ok(())
 }
+
+pub fn approve_item(conn: &Connection, id: i32) -> Result<()> {
+    let mut stmt = conn.prepare("UPDATE todo_list SET completed = 1 WHERE id =?")?;
+    stmt.execute(&[&id])?;
+
+    Ok(())
+}
+
+}
+pub fn truncate_at(input: &str, max_chars: u32) -> String {
+    let max_length = max_chars as usize;
+    if input.len() > max_length {
+        let truncated = &input[..max_length - 3];
+        let ellipsis = "...";
+        format!("{}{}", truncated, ellipsis)
+    } else {
+        input.to_string()
+    }
 }
     
 pub fn help() -> Result<()> {
@@ -124,7 +142,7 @@ pub fn verify_db(conn: &Connection) -> Result<()> {
     conn.execute("CREATE TABLE IF NOT EXISTS todo_list (
         id  INTEGER NOT NULL,
         text  TEXT NOT NULL,
-        date_added REAL NOT NULL DEFAULT current_timestamp,
+        date_created REAL NOT NULL DEFAULT current_timestamp,
         completed NUMERIC NOT NULL DEFAULT 0,
         PRIMARY KEY(id AUTOINCREMENT))", [], )?;
         Ok(())
