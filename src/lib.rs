@@ -1,16 +1,17 @@
 use std::{env, fs, path::{Path, PathBuf}};
+use console::style;
 use rusqlite::{Connection, Result};
 
 pub struct Todo {
     pub id: i32,
     pub text: String,
-    pub completed: bool,
+    pub completed: u8,
     pub date_created: String,
 }
 
 // Constructor for new instance of Todo
 impl Todo {
-    pub fn new(id: i32, text: String, date_created: String ,completed: bool) -> Self {
+    pub fn new(id: i32, text: String, date_created: String ,completed: u8) -> Self {
         Todo {
             id,
             text,
@@ -24,7 +25,43 @@ impl Todo {
             Ok(())
         }
     
-    }
+        pub fn list(conn: &Connection, sort_by_status: bool) -> Result<Vec<Todo>> {
+            let sql = if sort_by_status {
+                "SELECT * FROM todo_list ORDER BY completed, id"
+            } else {
+                "SELECT * FROM todo_list ORDER BY id"
+            };
+            let mut stmt = conn.prepare(sql)?;
+            let todo_iter = stmt.query_map((), |row| {
+                Ok(Todo::new(
+                    row.get(0)?,
+                    row.get(1)?,
+                    row.get(2)?,
+                    row.get(3)?,
+                ))
+            })?;
+    
+            let mut todos = Vec::new();
+            for todo in todo_iter {
+                todos.push(todo?);
+            }
+            Ok(todos)
+        }
+
+        pub fn print_list(todo_list: Vec<Todo>) -> Result<()> {
+            for t in todo_list {
+                let status = if t.completed == 1 {
+                    style("Done").green()
+                } else {
+                    style("Pending").yellow()
+                };
+                
+                println!("{}, {}",t.text, status);
+            }
+            Ok(())
+}
+}
+    
 pub fn help() -> Result<()> {
     let text = r#"Usage
     todo add <text>

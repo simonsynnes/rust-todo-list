@@ -29,7 +29,12 @@ fn main() -> Result<()> {
                 std::process::exit(1);
             }
             Ok(())
-        }        
+        }
+        "list" => {
+            let todo_list = Todo::list(&connection, true)?;
+            Todo::print_list(todo_list)?;
+            Ok(())
+        }
         "help" | "--help" | "-h" | _ => help(),
     }?;
 
