@@ -99,6 +99,7 @@ pub fn help() -> Result<()> {
     let text = r#"Usage
     todo add <text>
     todo list
+    todo reset
     todo remove <text>
     todo help
     "#;
