@@ -83,6 +83,13 @@ impl Todo {
 
         Ok(())
     }
+
+    pub fn delete(conn: &Connection, id: i32) -> Result<()> {
+        let mut stmt = conn.prepare("DELETE FROM todo_list WHERE id =?")?;
+        stmt.execute(&[&id])?;
+
+        Ok(())
+    }
 }
 pub fn truncate_at(input: &str, max_chars: u32) -> String {
     let max_length = max_chars as usize;

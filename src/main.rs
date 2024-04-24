@@ -45,6 +45,16 @@ fn main() -> Result<()> {
             }
             Ok(())
         }
+        "delete" => {
+            if !suffix.as_str().is_empty() {
+                let id = args[2].parse::<i32>().unwrap();
+                Todo::delete(&connection, id)?;
+            } else {
+                help()?;
+                std::process::exit(1);
+            }
+            Ok(())
+        }
         "reset" => {
             let confirmation = Confirm::new()
                 .with_prompt("Are you sure you want to reset the list?")
