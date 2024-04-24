@@ -1,6 +1,9 @@
-use std::{env, fs, path::{Path, PathBuf}};
 use console::style;
 use rusqlite::{Connection, Result};
+use std::{
+    env, fs,
+    path::{Path, PathBuf},
+};
 
 pub struct Todo {
     pub id: i32,
@@ -11,63 +14,68 @@ pub struct Todo {
 
 // Constructor for new instance of Todo
 impl Todo {
-    pub fn new(id: i32, text: String, date_created: String ,completed: u8) -> Self {
+    pub fn new(id: i32, text: String, date_created: String, completed: u8) -> Self {
         Todo {
             id,
             text,
             completed,
             date_created,
-            }
         }
-    
+    }
+
     pub fn add(conn: &Connection, text: &str) -> Result<()> {
-            conn.execute("INSERT INTO todo_list (text) VALUES (?)", &[text])?;
-            Ok(())
+        conn.execute("INSERT INTO todo_list (text) VALUES (?)", &[text])?;
+        Ok(())
+    }
+
+    pub fn list(conn: &Connection, sort_by_status: bool) -> Result<Vec<Todo>> {
+        let sql = if sort_by_status {
+            "SELECT * FROM todo_list ORDER BY completed, id"
+        } else {
+            "SELECT * FROM todo_list ORDER BY id"
+        };
+        let mut stmt = conn.prepare(sql)?;
+        let todo_iter = stmt.query_map((), |row| {
+            Ok(Todo::new(
+                row.get(0)?,
+                row.get(1)?,
+                row.get(2)?,
+                row.get(3)?,
+            ))
+        })?;
+
+        let mut todos = Vec::new();
+        for todo in todo_iter {
+            todos.push(todo?);
         }
-    
-        pub fn list(conn: &Connection, sort_by_status: bool) -> Result<Vec<Todo>> {
-            let sql = if sort_by_status {
-                "SELECT * FROM todo_list ORDER BY completed, id"
+        Ok(todos)
+    }
+
+    pub fn print_list(todo_list: Vec<Todo>) -> Result<()> {
+        for t in todo_list {
+            let status = if t.completed == 1 {
+                style("Done").green()
             } else {
-                "SELECT * FROM todo_list ORDER BY id"
+                style("Pending").yellow()
             };
-            let mut stmt = conn.prepare(sql)?;
-            let todo_iter = stmt.query_map((), |row| {
-                Ok(Todo::new(
-                    row.get(0)?,
-                    row.get(1)?,
-                    row.get(2)?,
-                    row.get(3)?,
-                ))
-            })?;
-    
-            let mut todos = Vec::new();
-            for todo in todo_iter {
-                todos.push(todo?);
-            }
-            Ok(todos)
+
+            println!(
+                "{:>4} | {:<44} {:<8} {}",
+                style(t.id).cyan().bright(),
+                style(truncate_at(&t.text, 12)).bright(),
+                status,
+                style(t.date_created).dim()
+            );
         }
+        Ok(())
+    }
 
-        pub fn print_list(todo_list: Vec<Todo>) -> Result<()> {
-            for t in todo_list {
-                let status = if t.completed == 1 {
-                    style("Done").green()
-                } else {
-                    style("Pending").yellow()
-                };
-                
-                println!("{:>4} | {:<44} {:<8} {}",style(t.id).cyan().bright(), style(truncate_at(&t.text, 12)).bright(), status, style(t.date_created).dim());
-            }
-            Ok(())
-}
+    pub fn approve_item(conn: &Connection, id: i32) -> Result<()> {
+        let mut stmt = conn.prepare("UPDATE todo_list SET completed = 1 WHERE id =?")?;
+        stmt.execute(&[&id])?;
 
-pub fn approve_item(conn: &Connection, id: i32) -> Result<()> {
-    let mut stmt = conn.prepare("UPDATE todo_list SET completed = 1 WHERE id =?")?;
-    stmt.execute(&[&id])?;
-
-    Ok(())
-}
-
+        Ok(())
+    }
 }
 pub fn truncate_at(input: &str, max_chars: u32) -> String {
     let max_length = max_chars as usize;
@@ -79,7 +87,7 @@ pub fn truncate_at(input: &str, max_chars: u32) -> String {
         input.to_string()
     }
 }
-    
+
 pub fn help() -> Result<()> {
     let text = r#"Usage
     todo add <text>
@@ -101,27 +109,26 @@ fn get_home_dir() -> String {
             if cfg!(target_os = "macos") {
                 let home = env::var("HOME").unwrap_or("".to_string());
                 PathBuf::from(home)
-        } else if cfg!(target_os = "windows") {
-            if let Some(userprofile) = env::var("USERPROFILE").ok() {
-                PathBuf::from(userprofile)
-            } else if let Some(homedrive) = env::var("HOMEDRIVE").ok() {
-                let homepath = env::var("HOMEPATH").unwrap_or("".to_string());
-                PathBuf::from(format!("{}{}", homedrive, homepath))
+            } else if cfg!(target_os = "windows") {
+                if let Some(userprofile) = env::var("USERPROFILE").ok() {
+                    PathBuf::from(userprofile)
+                } else if let Some(homedrive) = env::var("HOMEDRIVE").ok() {
+                    let homepath = env::var("HOMEPATH").unwrap_or("".to_string());
+                    PathBuf::from(format!("{}{}", homedrive, homepath))
+                } else {
+                    panic!("Couldn't find home directory");
+                }
             } else {
-                panic!("Couldn't find home directory");
+                panic!("Could not determine operating system");
             }
-        } else {
-            panic!("Could not determine operating system");
         }
+    };
+
+    match home.to_str() {
+        Some(home_str) => home_str.to_string(),
+        None => panic!("Could not convert home dir to str"),
     }
-};
-
-match home.to_str() {
-    Some(home_str) => home_str.to_string(),
-    None =>  panic!("Could not convert home dir to str"),
 }
-
-} 
 
 // create directory to store db
 pub fn verify_db_path(path: &str) -> Result<()> {
@@ -130,7 +137,7 @@ pub fn verify_db_path(path: &str) -> Result<()> {
         // Check if it does not exist
         match fs::create_dir(path) {
             Ok(_) => println!("Successfully created database folder {}", path),
-            
+
             Err(e) => eprintln!("Error creating database folder {}", e),
         }
     }
@@ -139,13 +146,16 @@ pub fn verify_db_path(path: &str) -> Result<()> {
 
 // create table if not exists
 pub fn verify_db(conn: &Connection) -> Result<()> {
-    conn.execute("CREATE TABLE IF NOT EXISTS todo_list (
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS todo_list (
         id  INTEGER NOT NULL,
         text  TEXT NOT NULL,
         date_created REAL NOT NULL DEFAULT current_timestamp,
         completed NUMERIC NOT NULL DEFAULT 0,
-        PRIMARY KEY(id AUTOINCREMENT))", [], )?;
-        Ok(())
+        PRIMARY KEY(id AUTOINCREMENT))",
+        [],
+    )?;
+    Ok(())
 }
 
 // get and verify db connection, creating table if not exists
@@ -155,5 +165,5 @@ pub fn get_connection() -> Result<Connection> {
     verify_db_path(&db_dir)?;
     let conn = Connection::open(&db_file_path)?;
     verify_db(&conn)?;
-    Ok(conn)  
+    Ok(conn)
 }
