@@ -1,4 +1,5 @@
 # Todo List Built With Rust
+
 This is a Command line tool to create and manage todo list items.
 SQLite is used as the database to persist items.
 
@@ -15,7 +16,11 @@ Usage:
         Lists all tasks
         Example: list
 
+    - delete
+        Delete all tasks
+
 ```
+
 ## Development commands:
 
 ```sh
